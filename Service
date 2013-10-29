@@ -25,7 +25,7 @@ elif [ "${OS}" = "FreeBSD" ];then
 	MYSQLPORT=`expr $CUSTPORT - 1000`
 fi
 ######NOTIFICATIONS###
-EMAIL="ishanka@gmail.com"
+EMAIL="test@test.com"
 SENDSMS="/opt/cadmus/sendsms"
 LOGGER="/usr/bin/logger"
 ####SERVER DATE ######
