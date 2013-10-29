@@ -40,7 +40,7 @@ INSTALLDIR="/opt/cadmus"
 exit
 if [ -d $BASEDIR ];then
 	cd $BASEDIR
-	sudo -u $USER git checkout thinkcube
+	sudo -u $USER git checkout <reponame>
 	sudo -u $USER git pull
 fi
 if [ ! -d $INSTALLDIR ];then
