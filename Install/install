@@ -12,15 +12,15 @@ if [ "$USER" = "root" ];then
 	read USER
 	if [ "$USER" = "root" ];then
 		echo "User you enterd is admin user. Re run the script."
-		exit
+		exit 1
 	fi
 fi
 
 if id -u $USER >/dev/null 2>&1;then
 	echo
 else
-	echo "User dose not exist"
-	exit
+	echo "User dose not exist!"
+	exit 1
 fi
 
 echo "Enter Git Repository Path:"
@@ -31,11 +31,31 @@ if [ ! -d $BASEDIR ];then
 	read BASEDIR
 	if [ ! -d $BASEDIR ];then
 		echo "Git Repository Not Found"
-		exit
+		exit 1
 	fi
 fi
 
-INSTALLDIR="/opt/cadmus"
+echo "Enter Oparating System Ex: Redhat/Ubuntu"
+read SYSOS
+
+if [ "$SYSOS" = "" ];then
+	echo "Oparating System Dose not exist!"
+	exit 1
+fi
+
+INSTALLDIR="/opt/sysmon"
+CHECKSMSSCRIPT=`grep "echo" ../sendsms`
+CHECKSMSSCRIPT=`echo $?`
+
+if [ "$CHECKSMSSCRIPT" = "0" ];then
+	echo "###############################################################################"
+	echo "##########                                                           ##########"
+	echo "##########    1. Edit sendsms Script to your sms gateway settings    ##########"
+	echo "##########    2. Remove echo Line from the Script                    ##########"
+	echo "##########                                                           ##########"
+	echo "###############################################################################"
+	exit 1
+fi
 
 exit
 if [ -d $BASEDIR ];then
@@ -45,9 +65,16 @@ if [ -d $BASEDIR ];then
 fi
 if [ ! -d $INSTALLDIR ];then
 	mkdir -p $INSTALLDIR
+	mkdir -p $INSTALLDIR/script
 	cd $BASEDIR
-	cp -r Deamon sendsms $INSTALLDIR
+	cp -r Deamon $INSTALLDIR
+	cp -r sendsms $INSTALLDIR/script
 	cp Service $INSTALLDIR/Deamon
-	cp Startup-Daemon/cadmus /etc/init.d/
-	update-rc.d cadmus
+	if [ "$SYSOS" = "Ubuntu" ];then
+		cp Startup-Daemon/sysmon.debian /etc/init.d/sysmon
+		update-rc.d sysmon
+	elif [ "$SYSOS" = "Redhat" ];then
+		cp Sartup-Daemon/sysmon.linux /etc/rc.d/init.d/sysmon
+		chkconfig --add sysmon
+	fi
 fi
