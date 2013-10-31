@@ -1,0 +1,85 @@
+#!/bin/sh
+
+#chkconfig: 2345 80 05
+#description: Sysmon Server
+
+# Get function from functions library
+. /etc/init.d/functions
+
+# Start the service sysmon
+start() {
+	if [ -f /var/lock/sysmon/sysmon.lock ];then
+		echo "sysmon Server Already Running"
+		exit
+	fi
+        echo -n "Starting sysmon server: "
+	cd /opt/sysmon/Deamon
+	python daemon.py shell_executor start
+	### Create the lock file ###
+	if [ ! -d /var/lock/sysmon ];then
+        	mkdir -p /var/lock/sysmon
+	fi
+        touch /var/lock/sysmon/sysmon.lock
+        echo -n "sysmon Server Started"
+        echo
+}
+# Stop the service sysmon
+stop() {
+	if [ ! -f /var/lock/sysmon/sysmon.lock ];then
+		echo "sysmon Server Already Stopped"
+		exit
+	fi
+        echo -n "Stopping sysmon server: "
+	cd /opt/sysmon/Deamon
+	python daemon.py shell_executor stop > /dev/null 2>&1
+	### Now, delete the lock file ###
+        rm -f /var/lock/sysmon/sysmon.lock
+        echo -n "sysmon Server Stopped"
+        echo
+}
+# Status the service sysmon
+status() {
+	if [ -e /var/lock/sysmon/sysmon.lock ]; then
+            echo -n "sysmon Server is running\n" && exit 0 || exit $?
+        else
+            echo -n "sysmon Server is not running\n"
+        fi
+}
+# Restart the service sysmon
+restart() {
+        echo -n "Stopping sysmon server: "
+	cd /opt/sysmon/Deamon
+	python daemon.py shell_executor stop > /dev/null 2>&1
+	### Now, delete the lock file ###
+        rm -f /var/lock/sysmon/sysmon.lock
+        echo -n "sysmon Server Stopped"
+        echo
+	echo -n "Starting sysmon server: "
+        python daemon.py shell_executor start
+        ### Create the lock file ###
+        if [ ! -d /var/lock/sysmon ];then
+                mkdir -p /var/lock/sysmon
+        fi
+        touch /var/lock/sysmon/sysmon.lock
+        echo -n "sysmon Server Started"
+        echo
+}
+### main logic ###
+case "$1" in
+  start)
+        start
+        ;;
+  stop)
+        stop
+        ;;
+  status)
+	status
+        ;;
+  restart)
+	restart
+        ;;
+  *)
+        echo $"Usage: $0 {start|stop|restart|status}"
+        exit 1
+esac
+exit 0
