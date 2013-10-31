@@ -1,9 +1,11 @@
 #!/bin/bash
 
-######### Edit ###############
+######### Edit Before Use ###############
+EMAIL="test@test.com"
+######### Stop Editting #################
 
-WORKDIR="/opt/cadmus/notify"
 
+##############################################################
 OS=`uname`
 if [ "${OS}" = "Linux" ];then
 	SERVERIP=$(ifconfig | grep 'inet addr:'| grep -v '127.0.0.1' | cut -d: -f2 | awk '{ print $1}')
@@ -24,14 +26,23 @@ elif [ "${OS}" = "FreeBSD" ];then
 	HTTPSPORT=`expr $CUSTPORT + 1000`
 	MYSQLPORT=`expr $CUSTPORT - 1000`
 fi
-######NOTIFICATIONS###
-EMAIL="test@test.com"
-SENDSMS="/opt/cadmus/sendsms"
-LOGGER="/usr/bin/logger"
-####SERVER DATE ######
+
+####SERVER Settings ######
+LOGGER=`which logger`
 LONGDATETIME=$(date)
-######End to be modified######
+WORKDIR="/opt/sysmon/notify"
+SENDSMS="/opt/sysmon/script/sendsms"
 ##############################
+if [ "$EMAIL" = "test@test.com" ];then
+	echo "###############################################################################"
+	echo "########                                                               ########"
+	echo "########                                                               ########"
+	echo "######## Change Email address form test@test.com to your email address ########"
+	echo "########                                                               ########"
+	echo "########                                                               ########"
+	echo "###############################################################################"
+	exit 1
+fi
 
 if [ -f /etc/redhat-release ];then
 	if [ -f /usr/bin/telnet ];then
@@ -81,17 +92,17 @@ fi
 
 ### Test Mem And Swap Usage ###
 if [ $FREEMEM -le "200" ] ; then
-        echo "Sever IP:$SERVERIP Total RAM:$TOTALMEM Used RAM:$USEDMEM Free RAM:$FREEMEM" >> server_mem.txt
+        echo "Sever IP:$SERVERIP Total RAM:$TOTALMEM Used RAM:$USEDMEM Free RAM:$FREEMEM" >> $WORKDIR/server_mem.log
 	$SENDSMS "Critical - RAM Usage on $SERVERIP Free Mem:$FREEMEM"
         $LOGGER -p user.error "Critical- RAM Usage $SERVERIP Free Mem:$FREEMEM $LONGDATETIME"
-        $MAIL -s "Critical - RAM Usage on $SERVERIP Free Mem:$FREEMEM" $EMAIL < server_mem.txt
-        rm -fr server_mem.txt	
+        $MAIL -s "Critical - RAM Usage on $SERVERIP Free Mem:$FREEMEM" $EMAIL < $WORKDIR/server_mem.log
+        rm -fr $WORKDIR/server_mem.log	
 elif [ $FREESWAP -le "200" ];then
-	echo "Sever IP:$SERVERIP Total RAM:$TOTALSWAP Used RAM:$USEDSWAP Free RAM:$FREESWAP" >> server_swap.txt
+	echo "Sever IP:$SERVERIP Total RAM:$TOTALSWAP Used RAM:$USEDSWAP Free RAM:$FREESWAP" >> $WORKDIR/server_swap.log
         $SENDSMS "Critical - SWAP Usage on $SERVERIP Free SWAP:$FREESWAP"
         $LOGGER -p user.error "Critical- SWAP Usage $SERVERIP Free SWAP:$FREESWAP $LONGDATETIME"
-        $MAIL -s "Critical - SWAP Usage on $SERVERIP Free SWAP:$FREESWAP" $EMAIL < server_mem.txt
-        rm -fr server_swap.txt
+        $MAIL -s "Critical - SWAP Usage on $SERVERIP Free SWAP:$FREESWAP" $EMAIL < $WORKDIR/server_mem.log
+        rm -fr $WORKDIR/server_swap.log
 fi
 
 ## Test Hard Disk Partition ###
@@ -101,32 +112,32 @@ do
 	PARTITION=$(echo $OUTPUT | awk '{ print $2 }' )
 	DISK=$(echo $OUTPUT | awk '{ print $3 }' )
 	if [ "$USEP" -ge "90" ]; then
-        	echo "Running out of space $PARTITION $USEP% $DISK on $SERVERIP as on $LONGDATETIME" >> server_disk.txt
+        	echo "Running out of space $PARTITION $USEP% $DISK on $SERVERIP as on $LONGDATETIME" >> $WORKDIR/server_disk.log
 		$SENDSMS "$SERVERIP Critical: Almost out of disk space $USEP% on $DISK"
 		$LOGGER -p user.error "Critical- Almost out of disk space $USEP% on $DISK $PARTITION at $LONGDATETIME"
-		$MAIL -s "Critical: Almost out of disk space $USEP% $DISK on $SERVERIP" $EMAIL < server_disk.txt
-		rm -fr server_disk.txt
+		$MAIL -s "Critical: Almost out of disk space $USEP% $DISK on $SERVERIP" $EMAIL < $WORKDIR/server_disk.log
+		rm -fr $WORKDIR/server_disk.log
 	elif [ "$USEP" -ge "70" ];then
-		echo "Running out of space $PARTITION $USEP% $DISK on $SERVERIP as on $LONGDATETIME" >> server_disk.txt
+		echo "Running out of space $PARTITION $USEP% $DISK on $SERVERIP as on $LONGDATETIME" >> $WORKDIR/server_disk.log
                 $SENDSMS "$SERVERIP Alert: Almost out of disk space $USEP% on $DISK"
                 $LOGGER -p user.error "Alert - Almost out of disk space $USEP% on $DISK $PARTITION at $LONGDATETIME"
-                $MAIL -s "Alert: Almost out of disk space $USEP% $DISK on $SERVERIP" $EMAIL < server_disk.txt
-		rm -fr server_disk.txt
+                $MAIL -s "Alert: Almost out of disk space $USEP% $DISK on $SERVERIP" $EMAIL < $WORKDIR/server_disk.log
+		rm -fr $WORKDIR/server_disk.log
 	fi
 done
 ### Test Load Avarage ###
 if  [ "$LOADAVG" -ge "15" ]; then
-         echo $USAGE >> server_avg.txt
+         echo $USAGE >> $WORKDIR/server_avg.log
          $SENDSMS "$SERVERIP Critical - Load Average $LOADAVG"
          $LOGGER -p user.error "Critical- Load Average $SERVERIP $LOADAVG $LONGDATETIME"
-         $MAIL -s "$SERVERIP Critical - Server Load Average $LOADAVG" $EMAIL < server_avg.txt
-         rm -fr server_avg.txt
+         $MAIL -s "$SERVERIP Critical - Server Load Average $LOADAVG" $EMAIL < $WORKDIR/server_avg.log
+         rm -fr $WORKDIR/server_avg.log
 elif [ "$LOADAVG" -ge "10" ]; then
-         echo $USAGE >> server_avg.txt
+         echo $USAGE >> $WORKDIR/server_avg.log
          $SENDSMS "$SERVERIP Busy - Load Average $LOADAVG"
          $LOGGER -p user.warn "$SERVERIP Busy - Load Average $LOADAVG $LONGDATETIME"
-         $MAIL -s "$SERVERIP Busy - Server Load Average $LOADAVG" $EMAIL < server_avg.txt
-         rm -fr server_avg.txt
+         $MAIL -s "$SERVERIP Busy - Server Load Average $LOADAVG" $EMAIL < $WORKDIR/server_avg.log
+         rm -fr $WORKDIR/server_avg.log
 else
 	echo "$SERVERIP Okay - Load Average $LOADAVG $LONGDATETIME"
         $LOGGER "$SERVERIP Okay - Load Average $LOADAVG $LONGDATETIME"
@@ -139,27 +150,27 @@ echo "quit"
 if [ "$?" -ne "1" ]; then #Ok
   echo "HTTP PORT CONNECTED"
   $LOGGER "Server Host: $HOSTNAME SERVER: $SERVERIP Service: HTTP Staus: UP Time: $LONGDATETIME"
-  if [ -f server_problem_first_time_http.txt ]; then #remove file if problem fixed
-                    rm -rf server_problem_first_time_http.txt
+  if [ -f $WORKDIR/server_problem_first_time_http.log ]; then #remove file if problem fixed
+                    rm -rf $WORKDIR/server_problem_first_time_http.log
                     $SENDSMS "Server Host: $HOSTNAME SERVER: $SERVERIP SERVICE: HTTP STATUS: UP Time: $LONGDATETIME"
                     $LOGGER "Server Host: $HOSTNAME SERVER: $SERVERIP Service: HTTP Staus: UP Time: $LONGDATETIME"
     else
-            if [ -f server_problem_http.txt ];then
-                    rm -rf server_problem_http.txt
+            if [ -f $WORKDIR/server_problem_http.log ];then
+                    rm -rf $WORKDIR/server_problem_http.log
                     $SENDSMS "Server Host: $HOSTNAME SERVER: $SERVERIP SERVICE: HTTP STATUS: UP Time: $LONGDATETIME"
                     $LOGGER "Server Host: $HOSTNAME SERVER: $SERVERIP Service: HTTP Staus: UP Time: $LONGDATETIME"
             fi
   fi
 
 else #Connection failure
-  if [ -f server_problem_first_time_http.txt ]; then #Second time, send notification below
-    echo "Server problem On Host: $HOSTNAME SERVICE: HTTP STATUS: DOWN Time: $LONGDATETIME" >> server_problem_http.txt
-        rm -rf server_problem_first_time_http.txt
+  if [ -f $WORKDIR/server_problem_first_time_http.log ]; then #Second time, send notification below
+    echo "Server problem On Host: $HOSTNAME SERVICE: HTTP STATUS: DOWN Time: $LONGDATETIME" >> $WORKDIR/server_problem_http.log
+        rm -rf $WORKDIR/server_problem_first_time_http.log
   else #First notification
-        if [ -f server_problem_http.txt ]; then
-                rm -fr server_problem_first_time_http.txt
+        if [ -f $WORKDIR/server_problem_http.log ]; then
+                rm -fr $WORKDIR/server_problem_first_time_http.log
         else
-                echo "Server problem On Host: $HOSTNAME SERVICE: HTTP STATUS: DOWN Time: $LONGDATETIME" >> server_problem_first_time_http.txt
+                echo "Server problem On Host: $HOSTNAME SERVICE: HTTP STATUS: DOWN Time: $LONGDATETIME" >> $WORKDIR/server_problem_first_time_http.log
         fi
   fi
 fi
@@ -171,27 +182,27 @@ echo "quit"
 if [ "$?" -ne "1" ]; then #Ok
   echo "HTTPS PORT CONNECTED"
   $LOGGER "Server Host: $HOSTNAME SERVER: $SERVERIP Service: HTTPS Staus: UP Time: $LONGDATETIME"
-  if [ -f server_problem_first_time_https.txt ]; then #remove file if problem fixed
-                    rm -rf server_problem_first_time_https.txt
+  if [ -f $WORKDIR/server_problem_first_time_https.log ]; then #remove file if problem fixed
+                    rm -rf $WORKDIR/server_problem_first_time_https.log
                     $SENDSMS "Server Host: $HOSTNAME SERVER: $SERVERIP SERVICE: HTTPS STATUS: UP Time: $LONGDATETIME"
                     $LOGGER "Server Host: $HOSTNAME SERVER: $SERVERIP Service: HTTPS Staus: UP Time: $LONGDATETIME"
     else
-            if [ -f server_problem_https.txt ];then
-                    rm -rf server_problem_https.txt
+            if [ -f $WORKDIR/server_problem_https.log ];then
+                    rm -rf $WORKDIR/server_problem_https.log
                     $SENDSMS "Server Host: $HOSTNAME SERVER: $SERVERIP SERVICE: HTTPS STATUS: UP Time: $LONGDATETIME"
                     $LOGGER "Server Host: $HOSTNAME SERVER: $SERVERIP Service: HTTPS Staus: UP Time: $LONGDATETIME"
             fi
   fi
 
 else #Connection failure
-  if [ -f server_problem_first_time_https.txt ]; then #Second time, send notification below
-    echo "Server problem On Host: $HOSTNAME SERVICE: HTTPS STATUS: DOWN Time: $LONGDATETIME" >> server_problem_https.txt
-        rm -rf server_problem_first_time_https.txt
+  if [ -f $WORKDIR/server_problem_first_time_https.log ]; then #Second time, send notification below
+    echo "Server problem On Host: $HOSTNAME SERVICE: HTTPS STATUS: DOWN Time: $LONGDATETIME" >> $WORKDIR/server_problem_https.log
+        rm -rf $WORKDIR/server_problem_first_time_https.log
   else #First notification
-        if [ -f server_problem_https.txt ]; then
-                rm -fr server_problem_first_time_https.txt
+        if [ -f $WORKDIR/server_problem_https.log ]; then
+                rm -fr $WORKDIR/server_problem_first_time_https.log
         else
-                echo "Server problem On Host: $HOSTNAME SERVICE: HTTPS STATUS: DOWN Time: $LONGDATETIME" >> server_problem_first_time_https.txt
+                echo "Server problem On Host: $HOSTNAME SERVICE: HTTPS STATUS: DOWN Time: $LONGDATETIME" >> $WORKDIR/server_problem_first_time_https.log
         fi
   fi
 fi
@@ -203,27 +214,27 @@ echo "quit"
 if [ "$?" -ne "1" ]; then #Ok
   echo "MYSQL PORT CONNECTED"
   $LOGGER "Server Host: $HOSTNAME SERVER: $SERVERIP Service: MYSQL Staus: UP Time: $LONGDATETIME"
-  if [ -f server_problem_first_time_mysql.txt ]; then #remove file if problem fixed
-                    rm -rf server_problem_first_time_mysql.txt
+  if [ -f $WORKDIR/server_problem_first_time_mysql.log ]; then #remove file if problem fixed
+                    rm -rf $WORKDIR/server_problem_first_time_mysql.log
                     $SENDSMS "Server Host: $HOSTNAME SERVER: $SERVERIP SERVICE: MYSQL STATUS: UP Time: $LONGDATETIME"
                     $LOGGER "Server Host: $HOSTNAME SERVER: $SERVERIP Service: MYSQL Staus: UP Time: $LONGDATETIME"
     else
-            if [ -f server_problem_mysql.txt ];then
-                    rm -rf server_problem_mysql.txt
+            if [ -f $WORKDIR/server_problem_mysql.log ];then
+                    rm -rf $WORKDIR/server_problem_mysql.log
                     $SENDSMS "Server Host: $HOSTNAME SERVER: $SERVERIP SERVICE: MYSQL STATUS: UP Time: $LONGDATETIME"
                     $LOGGER "Server Host: $HOSTNAME SERVER: $SERVERIP Service: MYSQL Staus: UP Time: $LONGDATETIME"
             fi
   fi
 
 else #Connection failure
-  if [ -f server_problem_first_time_mysql.txt ]; then #Second time, send notification below
-    echo "Server problem On Host: $HOSTNAME SERVICE: MYSQL STATUS: DOWN Time: $LONGDATETIME" >> server_problem_mysql.txt
-        rm -rf server_problem_first_time_mysql.txt
+  if [ -f $WORKDIR/server_problem_first_time_mysql.log ]; then #Second time, send notification below
+    echo "Server problem On Host: $HOSTNAME SERVICE: MYSQL STATUS: DOWN Time: $LONGDATETIME" >> $WORKDIR/server_problem_mysql.log
+        rm -rf $WORKDIR/server_problem_first_time_mysql.log
   else #First notification
-        if [ -f server_problem_mysql.txt ]; then
-                rm -fr server_problem_first_time_mysql.txt
+        if [ -f $WORKDIR/server_problem_mysql.log ]; then
+                rm -fr $WORKDIR/server_problem_first_time_mysql.log
         else
-                echo "Server problem On Host: $HOSTNAME SERVICE: MYSQL STATUS: DOWN Time: $LONGDATETIME" >> server_problem_first_time_mysql.txt
+                echo "Server problem On Host: $HOSTNAME SERVICE: MYSQL STATUS: DOWN Time: $LONGDATETIME" >> $WORKDIR/server_problem_first_time_mysql.log
         fi
   fi
 fi
@@ -236,76 +247,76 @@ echo "quit"
 if [ "$?" -ne "1" ]; then #Ok
   echo "DNS PORT CONNECTED"
   $LOGGER "Server Host: $HOSTNAME SERVER: $SERVERIP Service: DNS Staus: UP Time: $LONGDATETIME"
-  if [ -f server_problem_first_time_dns.txt ]; then #remove file if problem fixed
-                    rm -rf server_problem_first_time_dns.txt
+  if [ -f $WORKDIR/server_problem_first_time_dns.log ]; then #remove file if problem fixed
+                    rm -rf $WORKDIR/server_problem_first_time_dns.log
                     $SENDSMS "Server Host: $HOSTNAME SERVER: $SERVERIP SERVICE: DNS STATUS: UP Time: $LONGDATETIME"
                     $LOGGER "Server Host: $HOSTNAME SERVER: $SERVERIP Service: DNS Staus: UP Time: $LONGDATETIME"
     else
-            if [ -f server_problem_dns.txt ];then
-                    rm -rf server_problem_dns.txt
+            if [ -f $WORKDIR/server_problem_dns.log ];then
+                    rm -rf $WORKDIR/server_problem_dns.log
                     $SENDSMS "Server Host: $HOSTNAME SERVER: $SERVERIP SERVICE: DNS STATUS: UP Time: $LONGDATETIME"
                     $LOGGER "Server Host: $HOSTNAME SERVER: $SERVERIP Service: DNS Staus: UP Time: $LONGDATETIME"
             fi
   fi
 else #Connection failure
-  if [ -f server_problem_first_time_dns.txt ]; then #Second time, send notification below
-    echo "Server problem On Host: $HOSTNAME SERVICE: DNS STATUS: DOWN Time: $LONGDATETIME" >> server_problem_dns.txt
-        rm -rf server_problem_first_time_dns.txt
+  if [ -f $WORKDIR/server_problem_first_time_dns.log ]; then #Second time, send notification below
+    echo "Server problem On Host: $HOSTNAME SERVICE: DNS STATUS: DOWN Time: $LONGDATETIME" >> $WORKDIR/server_problem_dns.log
+        rm -rf $WORKDIR/server_problem_first_time_dns.log
   else #First notification
-        if [ -f server_problem_dns.txt ]; then
-                rm -fr server_problem_first_time_dns.txt
+        if [ -f $WORKDIR/server_problem_dns.log ]; then
+                rm -fr $WORKDIR/server_problem_first_time_dns.log
         else
-                echo "Server problem On Host: $HOSTNAME SERVICE: DNS STATUS: DOWN Time: $LONGDATETIME" >> server_problem_first_time_dns.txt
+                echo "Server problem On Host: $HOSTNAME SERVICE: DNS STATUS: DOWN Time: $LONGDATETIME" >> $WORKDIR/server_problem_first_time_dns.log
         fi
   fi
 fi
 fi
 ###Send mail notification after 1 failed check###
-if [ -f server_problem_first_time_http.txt ]; then
-  $MAIL -s "Server problem" $EMAIL < $WORKDIR/server_problem_first_time_http.txt
+if [ -f $WORKDIR/server_problem_first_time_http.log ]; then
+  $MAIL -s "Server problem" $EMAIL < $WORKDIR/server_problem_first_time_http.log
   $SENDSMS "Server problem On Host: $HOSTNAME SERVER: $SERVERIP SERVICE: HTTP STATUS: DOWN Time: $LONGDATETIME"
   $LOGGER -p user.error "Server Host: $HOSTNAME SERVER: $SERVERIP Service: HTTP Staus: DOWN Time: $LONGDATETIME"
 fi
 
-if [ -f server_problem_first_time_https.txt ]; then
-  $MAIL -s "Server problem" $EMAIL < $WORKDIR/server_problem_first_time_https.txt
+if [ -f $WORKDIR/server_problem_first_time_https.log ]; then
+  $MAIL -s "Server problem" $EMAIL < $WORKDIR/server_problem_first_time_https.log
   $SENDSMS "Server problem On Host: $HOSTNAME SERVER: $SERVERIP SERVICE: HTTPS STATUS: DOWN Time: $LONGDATETIME"
   $LOGGER -p user.error "Server Host: $HOSTNAME SERVER: $SERVERIP Service: HTTPS Staus: DOWN Time: $LONGDATETIME"
 fi
 
-if [ -f server_problem_first_time_mysql.txt ]; then
-  $MAIL -s "Server problem" $EMAIL < $WORKDIR/server_problem_first_time_mysql.txt
+if [ -f $WORKDIR/server_problem_first_time_mysql.log ]; then
+  $MAIL -s "Server problem" $EMAIL < $WORKDIR/server_problem_first_time_mysql.log
   $SENDSMS "Server problem On Host: $HOSTNAME SERVER: $SERVERIP SERVICE: MYSQL STATUS: DOWN Time: $LONGDATETIME"
   $LOGGER -p user.error "Server Host: $HOSTNAME SERVER: $SERVERIP Service: MYSQL Staus: DOWN Time: $LONGDATETIME"
 fi
 
-if [ -f server_problem_first_time_dns.txt ]; then
-  $MAIL -s "Server problem" $EMAIL < $WORKDIR/server_problem_first_time_dns.txt
+if [ -f $WORKDIR/server_problem_first_time_dns.log ]; then
+  $MAIL -s "Server problem" $EMAIL < $WORKDIR/server_problem_first_time_dns.log
   $SENDSMS "Server problem On Host: $HOSTNAME SERVER: $SERVERIP SERVICE: DNS STATUS: DOWN Time: $LONGDATETIME"
   $LOGGER -p user.error "Server Host: $HOSTNAME SERVER: $SERVERIP Service: DNS Staus: DOWN Time: $LONGDATETIME"
 fi
 
 ###Send mail notification after 2 failed check###
-if [ -f server_problem_http.txt ]; then
-  $MAIL -s "Server problem" $EMAIL < $WORKDIR/server_problem_http.txt
+if [ -f $WORKDIR/server_problem_http.log ]; then
+  $MAIL -s "Server problem" $EMAIL < $WORKDIR/server_problem_http.log
   $SENDSMS "CRITICAL THIS IS A REMINDER Server problem On Host: $HOSTNAME SERVER: $SERVERIP SERVICE: HTTP STATUS: DOWN Time: $LONGDATETIME"
   $LOGGER -p user.error "CRITICAL THIS IS A REMINDER Server Host: $HOSTNAME SERVER: $SERVERIP Service: HTTP Staus: DOWN Time: $LONGDATETIME"
 fi
 
-if [ -f server_problem_https.txt ]; then
-  $MAIL -s "Server problem" $EMAIL < $WORKDIR/server_problem_https.txt
+if [ -f $WORKDIR/server_problem_https.log ]; then
+  $MAIL -s "Server problem" $EMAIL < $WORKDIR/server_problem_https.log
   $SENDSMS "CRITICAL THIS IS A REMINDER Server problem On Host: $HOSTNAME SERVER: $SERVERIP SERVICE: HTTPS STATUS: DOWN Time: $LONGDATETIME"
   $LOGGER -p user.error "CRITICAL THIS IS A REMINDER Server Host: $HOSTNAME SERVER: $SERVERIP Service: HTTPS Staus: DOWN Time: $LONGDATETIME"
 fi
 
-if [ -f server_problem_mysql.txt ]; then
-  $MAIL -s "Server problem" $EMAIL < $WORKDIR/server_problem_mysql.txt
+if [ -f $WORKDIR/server_problem_mysql.log ]; then
+  $MAIL -s "Server problem" $EMAIL < $WORKDIR/server_problem_mysql.log
   $SENDSMS "CRITICAL THIS IS A REMINDER Server problem On Host: $HOSTNAME SERVER: $SERVERIP SERVICE: MYSQL STATUS: DOWN Time: $LONGDATETIME"
   $LOGGER -p user.error "CRITICAL THIS IS A REMINDER Server Host: $HOSTNAME SERVER: $SERVERIP Service: MYSQL Staus: DOWN Time: $LONGDATETIME"
 fi
 
-if [ -f server_problem_dns.txt ]; then
-  $MAIL -s "Server problem" $EMAIL < $WORKDIR/server_problem_dns.txt
+if [ -f $WORKDIR/server_problem_dns.log ]; then
+  $MAIL -s "Server problem" $EMAIL < $WORKDIR/server_problem_dns.log
   $SENDSMS "CRITICAL THIS IS A REMINDER Server problem On Host: $HOSTNAME SERVER: $SERVERIP SERVICE: DNS STATUS: DOWN Time: $LONGDATETIME"
   $LOGGER -p user.error "CRITICAL THIS IS A REMINDER Server Host: $HOSTNAME SERVER: $SERVERIP Service: DNS Staus: DOWN Time: $LONGDATETIME"
 fi
