@@ -10,6 +10,6 @@ MEMORY Usage<br>
 DISK Usage<br>
 SYSTEM Load<br>
 
-With SMS and Email Alert
+With Logger/SMS and Email Alert
 
 Created By Ishanka Anuradha Ranasooriya
